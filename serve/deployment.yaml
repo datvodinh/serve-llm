@@ -37,7 +37,8 @@ applications:
           engine_args:
             model: meta-llama/Meta-Llama-3.1-8B-Instruct
             served_model_name: Llama-3
-            download_dir: /models/
+            download_dir: models/
             trust_remote_code: true
             tensor_parallel_size: 1
-            worker_use_ray: true
+            worker_use_ray: false
+            max_model_len: 16384
