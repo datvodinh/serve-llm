@@ -1,0 +1,43 @@
+# This file was generated using the `serve build` command on Ray v2.34.0.
+
+proxy_location: EveryNode
+
+http_options:
+  host: 0.0.0.0
+  port: 8000
+grpc_options:
+  port: 9000
+  grpc_servicer_functions: []
+
+logging_config:
+  encoding: TEXT
+  log_level: INFO
+  logs_dir: null
+  enable_access_log: true
+
+applications:
+  - name: app
+    runtime_env: {}
+    route_prefix: /
+    import_path: src.main:deployment
+    deployments:
+      - name: VLLMDeployment
+
+        autoscaling_config:
+          target_ongoing_requests: 5
+          min_replicas: 1
+          max_replicas: 2
+          max_ongoing_requests: 10
+
+        ray_actor_options:
+          num_cpus: 0.5
+          num_gpus: 0.05
+
+        user_config:
+          engine_args:
+            model: meta-llama/Meta-Llama-3.1-8B-Instruct
+            served_model_name: Llama-3
+            download_dir: /models/
+            trust_remote_code: true
+            tensor_parallel_size: 1
+            worker_use_ray: true

@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "serve"
+version = "0.1.0"
+description = ""
+authors = ["datvodinh <vodinhdat03@gmail.com>"]
+readme = "README.md"
+packages = [
+  {include = "src"}
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+ray = {extras = ["serve"], version = "^2.34.0"}
+vllm = "^0.5.4"
+fastapi = "^0.112.1"
+
+
+[tool.poetry.group.dev.dependencies]
+deptry = "^0.19.1"
+ruff = "^0.6.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
