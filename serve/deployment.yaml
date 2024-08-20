@@ -17,7 +17,9 @@ logging_config:
 
 applications:
   - name: app
-    runtime_env: {}
+    runtime_env:
+      env_vars:
+        VLLM_TEST_FORCE_FP8_MARLIN: "1"
     route_prefix: /
     import_path: src.main:deployment
     deployments:
@@ -35,10 +37,11 @@ applications:
 
         user_config:
           engine_args:
-            model: meta-llama/Meta-Llama-3.1-8B-Instruct
+            model: neuralmagic/Meta-Llama-3.1-8B-Instruct-FP8
             served_model_name: Llama-3
             download_dir: models/
             trust_remote_code: true
             tensor_parallel_size: 1
             worker_use_ray: false
+            # quantization: fp8
             max_model_len: 16384
