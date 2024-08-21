@@ -13,6 +13,7 @@ python = "^3.11"
 ray = {extras = ["serve"], version = "2.34.0"}
 vllm = "^0.5.4"
 fastapi = "^0.112.1"
+starlette = "^0.38.2"
 
 
 [tool.poetry.group.dev.dependencies]
