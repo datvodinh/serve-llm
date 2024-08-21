@@ -20,6 +20,21 @@ jobs:
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@2.0.0
 
+  tag:
+    name: Update Tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Create a new tag
+        id: tag
+        uses: anothrNick/github-tag-action@1.70.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: "true"
+          DEFAULT_BUMP: patch
+
   lint:
     name: Ruff Lint
     runs-on: ubuntu-latest
@@ -47,14 +62,6 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
-
-      - name: Create a new tag
-        id: tag
-        uses: anothrNick/github-tag-action@1.70.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: "true"
-          DEFAULT_BUMP: patch
 
       - name: Build Serve
         uses: ./.github/actions/build-python
