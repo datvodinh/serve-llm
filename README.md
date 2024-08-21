@@ -18,5 +18,11 @@ make serve
 - Docker
 
 ```bash
-docker build -t serve .
+docker run --gpus all -v .:/code ghcr.io/datvodinh/serve:latest
+```
+
+- Kubernetes
+
+```bash
+kubectl apply -f k8s/ray-service.yaml
 ```
