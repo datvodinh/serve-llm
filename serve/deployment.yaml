@@ -1,10 +1,10 @@
-# This file was generated using the `serve build` command on Ray v2.34.0.
+# This file was generated using the `serve build` command on Ray v2.40.0.
 
 proxy_location: EveryNode
-
 http_options:
   host: 0.0.0.0
   port: 8000
+
 grpc_options:
   port: 9000
   grpc_servicer_functions: []
@@ -17,31 +17,27 @@ logging_config:
 
 applications:
   - name: app
-    runtime_env:
-      env_vars:
-        VLLM_TEST_FORCE_FP8_MARLIN: "1"
     route_prefix: /
-    import_path: src.main:deployment
+    import_path: src.main:llm_app
     deployments:
       - name: VLLMDeployment
-
-        autoscaling_config:
-          target_ongoing_requests: 5
-          min_replicas: 1
-          max_replicas: 2
-          max_ongoing_requests: 10
-
+        runtime_env:
+          env_vars:
+            VLLM_USE_V1: "1"
+            VLLM_LOGGING_LEVEL: "DEBUG"
+            VLLM_DISABLE_COMPILE_CACHE: "1"
+            VLLM_ATTENTION_BACKEND: "TRITON_ATTN"
         ray_actor_options:
-          num_cpus: 0.5
-          num_gpus: 0.05
-
+          num_cpus: 4
+          num_gpus: 0.001
         user_config:
           engine_args:
-            model: neuralmagic/Meta-Llama-3.1-8B-Instruct-FP8
-            served_model_name: Llama-3
-            download_dir: models/
+            model: RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8
+            served_model_name: llama
             trust_remote_code: true
             tensor_parallel_size: 1
-            worker_use_ray: false
-            # quantization: fp8
-            max_model_len: 16384
+            max_model_len: 32000
+            max_num_seqs: 16
+            gpu_memory_utilization: 0.9
+            max_num_batched_tokens: 512
+            enforce_eager: true

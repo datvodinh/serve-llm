@@ -1,25 +1,28 @@
-[tool.poetry]
+[project]
 name = "serve"
 version = "0.1.0"
 description = ""
-authors = ["datvodinh <vodinhdat03@gmail.com>"]
+authors = [{ name = "datvodinh", email = "vodinhdat03@gmail.com" }]
+requires-python = ">=3.11"
 readme = "README.md"
-packages = [
-  {include = "src"}
+dependencies = [
+    "fastapi>=0.119.1",
+    "ray[default,llm,serve]>=2.50.1",
+    "vllm>=0.11.0",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-ray = {extras = ["serve"], version = "2.34.0"}
-vllm = "^0.5.4"
-fastapi = "^0.112.1"
-starlette = "^0.38.2"
+[dependency-groups]
+dev = [
+    "deptry>=0.19.1,<0.20",
+    "ruff>=0.6.1,<0.7",
+]
 
+[tool.hatch.build.targets.sdist]
+include = ["src"]
 
-[tool.poetry.group.dev.dependencies]
-deptry = "^0.19.1"
-ruff = "^0.6.1"
+[tool.hatch.build.targets.wheel]
+include = ["src"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

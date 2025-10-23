@@ -1,22 +1,18 @@
-from typing import Dict, Any
-import logging
-
-from fastapi import FastAPI
-from starlette.requests import Request
-from starlette.responses import StreamingResponse, JSONResponse
-
 from ray import serve
-
+from fastapi import FastAPI
+from fastapi.requests import Request
+from fastapi.responses import StreamingResponse, JSONResponse
+from typing import Dict, Any
 from vllm.engine.arg_utils import AsyncEngineArgs
 from vllm.engine.async_llm_engine import AsyncLLMEngine
+from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
+from vllm.entrypoints.openai.serving_models import OpenAIServingModels, BaseModelPath
 from vllm.entrypoints.openai.protocol import (
     ChatCompletionRequest,
     ChatCompletionResponse,
     ErrorResponse,
+    ModelCard,
 )
-from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-
-logger = logging.getLogger("ray.serve")
 
 app = FastAPI()
 
@@ -24,96 +20,52 @@ app = FastAPI()
 @serve.deployment
 @serve.ingress(app)
 class VLLMDeployment:
-    def __init__(self):
-        pass
-
-    def reconfigure(self, config: Dict[str, Any]):
-        """
-        Reconfigure the deployment with new settings.
-
-        This method updates the engine arguments and associated configurations
-        for the deployment. It initializes a new instance of AsyncLLMEngine
-        based on the provided engine arguments and resets the chat serving state.
-
-        Args:
-            config : Dict[str, Any]
-                A dictionary containing the configuration settings which include
-                engine arguments under the "engine_args" key and optionally the
-                response role under the "response_role" key.
-
-        Returns:
-            None
-
-        Logs:
-            Logs the engine arguments with which the deployment is being started.
-
-        Example:
-            ```python
-            config = {
-                "engine_args": {
-                    "model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
-                    "max_model_len": 8192,
-                    ...
-                },
-                "response_role": "assistant"
-            }
-            deployment_instance.reconfigure(config)
-            ```
-        """
-        engine_args = AsyncEngineArgs(**config["engine_args"])
-        logger.info(f"Starting with engine args: {engine_args}")
-
-        self.openai_serving_chat = None
+    async def reconfigure(self, config: Dict[str, Any]):
+        self.config = config
+        self.engine_args = AsyncEngineArgs(**config["engine_args"])
         self.response_role = config.get("response_role", "assistant")
-        self.engine_args = engine_args
-        self.engine = AsyncLLMEngine.from_engine_args(engine_args)
+        self.engine = AsyncLLMEngine.from_engine_args(self.engine_args)
+        model_config = await self.engine.get_model_config()
+        self.openai_serving_chat = OpenAIServingChat(
+            engine_client=self.engine,
+            model_config=model_config,
+            models=OpenAIServingModels(
+                engine_client=self.engine,
+                model_config=model_config,
+                base_model_paths=[
+                    BaseModelPath(
+                        name=config["engine_args"].get("served_model_name"),
+                        model_path="/",
+                    )
+                ],
+            ),
+            response_role=self.response_role,
+            chat_template=None,
+            request_logger=None,
+            chat_template_content_format="auto",
+        )
+
+    @app.get("/health")
+    async def health(self):
+        print("VLLMDeployment is healthy!")
+        return {"status": "healthy"}
+
+    @app.get("/v1/models")
+    async def get_models(self):
+        return ModelCard(
+            id=self.engine_args.model,
+            root=self.engine_args.download_dir,
+            max_model_len=self.engine_args.max_model_len,
+            owned_by="davodinh",
+            parent="datvodinh",
+        )
 
     @app.post("/v1/chat/completions")
     async def create_chat_completion(
-        self, request: ChatCompletionRequest, raw_request: Request
+        self,
+        request: ChatCompletionRequest,
+        raw_request: Request,
     ):
-        """
-        Handle the creation of chat completions.
-
-        This endpoint processes incoming chat requests and generates responses
-        using the configured language model. If the OpenAIServingChat instance 
-        is not initialized, it sets it up with the appropriate configuration 
-        from the engine.
-
-        Args:
-            request : ChatCompletionRequest
-                The incoming chat completion request.
-            raw_request : Request
-                The raw HTTP request object.
-
-        Returns:
-            JSONResponse or StreamingResponse:
-                A JSON response containing the chat completion if request.stream is False,
-                otherwise a streaming response containing the chat event stream.
-        
-        Raises:
-            Exception
-                If any errors occur during the generation of the chat completion, 
-                they will be logged and appropriate error responses will be returned.
-        """
-        if not self.openai_serving_chat:
-            model_config = await self.engine.get_model_config()
-            if self.engine_args.served_model_name is not None:
-                served_model_names = self.engine_args.served_model_name
-            else:
-                served_model_names = [self.engine_args.model]
-            self.openai_serving_chat = OpenAIServingChat(
-                async_engine_client=self.engine,
-                model_config=model_config,
-                served_model_names=served_model_names,
-                response_role=self.response_role,
-                lora_modules=None,
-                chat_template=None,
-                prompt_adapters=None,
-                request_logger=None,
-            )
-
-        logger.info(f"Request: {request}")
         generator = await self.openai_serving_chat.create_chat_completion(
             request=request,
             raw_request=raw_request,
@@ -133,4 +85,4 @@ class VLLMDeployment:
             return JSONResponse(content=generator.model_dump())
 
 
-deployment = VLLMDeployment.bind()
+llm_app = VLLMDeployment.bind()
